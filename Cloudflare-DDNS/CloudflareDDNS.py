@@ -1,5 +1,8 @@
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import os
+import re
 import sys
 import time
 import getopt
@@ -7,26 +10,32 @@ import signal
 
 
 class CloudflareDDNS:
-    def __init__(self, checkPeriod):
+    def __init__(self, token, checkPeriod, address='ip.cn'):
+        self._token = token
         self._checkPeriod = checkPeriod
+        self._address = address
         self._running = True
 
-    def _getIPAddress():
+    def _getIPAddress(self):
+        getIPMethod = os.popen('curl -s ' + self._address)
+        getIPResponses = getIPMethod.readlines()[0]
+        ipPattern = re.compile(r'\d+\.\d+\.\d+\.\d+')
+        ip = ipPattern.findall(getIPResponses)[0]
+        return ip
+
+    def _getIPRecord(self):
         pass
 
-    def _getIPRecord():
-        pass
-
-    def _updateIPRecord(newIP):
+    def _updateIPRecord(self, newIP):
         pass
 
     def Run(self):
-        IPRecord = self._getIPRecord()
+        ipRecord = self._getIPRecord()
         while self._running:
             publicIP = self._getIPAddress()
-            if IPRecord != publicIP:
+            if ipRecord != publicIP:
                 self._updateIPRecord(publicIP)
-                IPRecord = publicIP
+                ipRecord = publicIP
             time.sleep(self._checkPeriod)
 
     def Stop(self):
@@ -62,7 +71,7 @@ def main():
 
     # Parse command line inputs
     config = parseInput()
-    
+
     # Instanlise the DDNS service
     service = CloudflareDDNS()
 
