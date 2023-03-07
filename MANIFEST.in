@@ -1,1 +1,3 @@
-recursive-include Cloudflare-DDNS *.py
+recursive-include cloudflare_ddns *.py
+include README.md
+include LICENSE
