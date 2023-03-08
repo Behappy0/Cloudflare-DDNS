@@ -1,4 +1,4 @@
-from .cloudflare_ddns import CloudflareDDNS
+from .service import CloudflareDDNS
 
 
 __all__ = ["CloudflareDDNS"]

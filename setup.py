@@ -18,7 +18,7 @@ setup(
     install_requires=[],
     entry_points="""
     [console_scripts]
-    cloudflare-ddns = cloudflare_ddns.cloudflare_ddns:main
+    cloudflare-ddns = cloudflare_ddns.service:main
     """,
     classifiers=[
         'License :: OSI Approved :: MIT License',
