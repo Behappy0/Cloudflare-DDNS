@@ -10,7 +10,7 @@ import signal
 
 
 class CloudflareDDNS:
-    def __init__(self, host_name, domain_name, token, check_period, address='ip.cn'):
+    def __init__(self, host_name, domain_name, token, check_period=60, address='ip.cn'):
         self._host_name = host_name
         self._domain_name = domain_name
         self._token = token
@@ -73,8 +73,8 @@ def check_python():
     if info[0] == 2 and not info[1] >= 6:
         print('Python 2.6+ required.')
         sys.exit(1)
-    elif info[0] == 3 and not info[1] >= 3:
-        print('Python 3.3+ required.')
+    elif info[0] == 3 and not info[1] >= 6:
+        print('Python 3.6+ required.')
         sys.exit(1)
     elif info[0] not in [2, 3]:
         print('Python version not supported.')
@@ -94,6 +94,9 @@ def main():
 
     # Parse command line inputs
     config = parse_input()
+
+    # check config
+    check_config(config)
 
     # Instanlise the DDNS service
     service = CloudflareDDNS()

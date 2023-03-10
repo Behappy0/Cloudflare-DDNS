@@ -1,4 +1,5 @@
 from setuptools import setup
+from cloudflare_ddns import __version__ as package_version
 
 
 with open("README.md", "r", encoding='utf-8') as f:
@@ -6,15 +7,13 @@ with open("README.md", "r", encoding='utf-8') as f:
 
 setup(
     name="cloudflare-ddns",
-    version="1.0.0",
+    version=package_version,
     license='MIT',
     description="A DDNS service for Cloudflare domain name",
     author='Behappy0',
     url='https://github.com/Behappy0/Cloudflare-DDNS',
     packages=['cloudflare_ddns'],
-    package_data={
-        'cloudflare_ddns': ['README.md', 'LICENSE']
-    },
+    include_package_data=True,
     install_requires=[],
     entry_points="""
     [console_scripts]

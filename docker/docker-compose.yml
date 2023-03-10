@@ -1,8 +1,11 @@
 version: "3.9"
 services:
   cloudflare-ddns:
-    build: .
     image: cloudflare-ddns
+    environment:
+      - HOST_NAME=
+      - DOMAIN_NAME=
+      - TOKEN=
     network_mode: bridge
     container_name: Cloudflare-DDNS
     restart: unless-stopped
