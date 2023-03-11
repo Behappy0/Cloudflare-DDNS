@@ -1,45 +1,92 @@
 from __future__ import absolute_import, division, print_function, \
     with_statement, unicode_literals
 
-import os
 import re
 import sys
 import time
+import json
 import getopt
 import signal
+import urllib.error
+from urllib.parse import urljoin
+from urllib.request import Request, urlopen
 
 
 class CloudflareDDNS:
-    def __init__(self, host_name, domain_name, token, check_period=60, address='ip.cn'):
-        self._host_name = host_name
-        self._domain_name = domain_name
-        self._token = token
-        self._check_period = check_period
-        self._address = address
-        self._types = 'A'
+
+    api = 'https://api.cloudflare.com/client/v4/zones'
+
+    def __init__(self, host_name, domain_name, token, types='A', check_period=60, address='http://www.net.cn/static/customercare/yourip.asp'):
+        self.host_name = host_name
+        self.domain_name = domain_name
+        self.token = token
+        self.check_period = check_period
+        self.address = address
+        self.types = types
+        self._zone_identifier = self._get_zone_identifier()
         self._running = True
 
+    @property
+    def _header(self):
+        return {
+            "Authorization": "Bearer " + self.token,
+            "Content-Type": "application/json"
+        }
+
     def _get_ip_address(self):
-        get_ip_method = os.popen('curl -s ' + self._address)
-        get_ip_responses = get_ip_method.readlines()[0]
+        try:
+            get_ip_url = urlopen(self.address)
+        except urllib.error.HTTPError as e:
+            print("Get ip address failed: " + e.code, file=sys.stderr)
+            sys.exit(2)
+        get_ip_response = get_ip_url.read()
         ip_pattern = re.compile(r'\d+\.\d+\.\d+\.\d+')
-        ip = ip_pattern.findall(get_ip_responses)[0]
-        return ip
+        ip = ip_pattern.findall(get_ip_response)
+        if not ip:
+            print("Get ip address failed: no ip in response", file=sys.stderr)
+            sys.exit(2)
+        else:
+            return ip[0]
+
+    def _get_zone_identifier(self):
+        name = "name=" + self.domain_name
+        parameters = "?" + name
+        url = self.api + parameters
+        request = Request(url, headers=self._header, method="GET")
+        try:
+            response = urlopen(request).read()
+        except urllib.error.HTTPError as e:
+            if e.code == 403:
+                print("Wrong API Token", file=sys.stderr)
+                sys.exit(2)
+            else:
+                raise
+        result = json.loads(response)['result']
+        if not result:
+            print("Wrong Domain Name", file=sys.stderr)
+            sys.exit(2)
+        else:
+            return result[0]['id']
 
     def _get_ip_record(self):
-        pass
+        name = "name=" + self.domain_name
+        types = "type=" + self.types
+        parameters = "?" + name + types
+        url = urljoin(self.api, self._zone_identifier, 'dns_records') + parameters
+        request = Request(url, headers=self._header, method="GET")
 
     def _update_ip_record(self, new_ip):
         pass
 
     def run(self):
+        self._running = True
         ip_record = self._get_ip_record()
         while self._running:
             public_ip = self._get_ip_address()
             if ip_record != public_ip:
                 self._update_ip_record(public_ip)
                 ip_record = public_ip
-            time.sleep(self._check_period)
+            time.sleep(self.check_period)
 
     def stop(self):
         self._running = False
