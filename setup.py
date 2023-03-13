@@ -15,17 +15,16 @@ setup(
     packages=['cloudflare_ddns'],
     include_package_data=True,
     install_requires=[],
+    python_requires=">=3.9",
     entry_points="""
     [console_scripts]
     cloudflare-ddns = cloudflare_ddns.service:main
     """,
     classifiers=[
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
