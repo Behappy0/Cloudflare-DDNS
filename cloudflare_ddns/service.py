@@ -10,16 +10,16 @@ import urllib.error
 from urllib.request import Request, urlopen
 
 
-def parameter_join(*parameters):
+def parameter_join(*parameters: str) -> str:
     return '?' + '&'.join(parameters)
 
 
-def url_path_join(url, *paths):
+def url_path_join(url: str, *paths: str) -> str:
     paths = [path.removeprefix('/').removesuffix('/') for path in paths]
     return '/'.join([url.removesuffix('/'), *paths])
 
 
-def record_join(host_name, domain_name):
+def record_join(host_name: str, domain_name: str) -> str:
     return domain_name if host_name is None or host_name.isspace() \
         else host_name + '.' + domain_name
 
@@ -28,7 +28,7 @@ class CloudflareDDNS:
 
     api = 'https://api.cloudflare.com/client/v4/zones'
 
-    def __init__(self, host_name, domain_name, token, types='A', check_period=60, get_ip_url='http://www.net.cn/static/customercare/yourip.asp'):
+    def __init__(self, host_name: str or None, domain_name: str, token: str, types: str = 'A', check_period: int = 60, get_ip_url: str = 'http://www.net.cn/static/customercare/yourip.asp'):
         self.host_name = host_name
         self.domain_name = domain_name
         self.token = token
@@ -36,16 +36,20 @@ class CloudflareDDNS:
         self.get_ip_url = get_ip_url
         self.types = types
         self._zone_identifier = self._get_zone_identifier()
-        self._running = True
+        self._is_running = False
 
     @property
-    def _header(self):
+    def is_running(self) -> bool:
+        return self._is_running
+
+    @property
+    def _header(self) -> dict[str, str]:
         return {
             "Authorization": "Bearer " + self.token,
             "Content-Type": "application/json"
         }
 
-    def get_ip_address(self):
+    def get_ip_address(self) -> str:
         try:
             get_ip_response = urlopen(self.get_ip_url)
         except urllib.error.HTTPError as e:
@@ -70,7 +74,7 @@ class CloudflareDDNS:
         else:
             return ip[0]
 
-    def _get_zone_identifier(self):
+    def _get_zone_identifier(self) -> str:
         name = "name=" + self.domain_name
         parameters = parameter_join(name)
         url = self.api + parameters
@@ -90,7 +94,7 @@ class CloudflareDDNS:
         else:
             return result[0]['id']
 
-    def get_ip_record(self):
+    def get_ip_record(self) -> str:
         name = "name=" + record_join(self.host_name, self.domain_name)
         types = "type=" + self.types
         parameters = parameter_join(name, types)
@@ -106,28 +110,28 @@ class CloudflareDDNS:
             else:
                 raise
 
-    def update_ip_record(self, new_ip):
+    def update_ip_record(self, new_ip: str) -> bool:
         pass
 
-    def run(self):
-        self._running = True
+    def run(self) -> None:
+        self._is_running = True
         ip_record = self.get_ip_record()
-        while self._running:
+        while self._is_running:
             public_ip = self.get_ip_address()
             if ip_record != public_ip:
                 self.update_ip_record(public_ip)
                 ip_record = public_ip
             time.sleep(self.check_period)
 
-    def stop(self):
-        self._running = False
+    def stop(self) -> None:
+        self._is_running = False
 
 
-def print_help_information():
+def print_help_information() -> None:
     pass
 
 
-def parse_input():
+def parse_input() -> dict[str, any]:
     shortopts = 'hp:'
     longopts = ['help', 'check-period=']
 
@@ -135,6 +139,7 @@ def parse_input():
         optdict, _ = getopt.getopt(sys.argv[1:], shortopts, longopts)
     except getopt.GetoptError as e:
         print(e, file=sys.stderr)
+        print_help_information()
         sys.exit(2)
 
     config = dict()
@@ -146,7 +151,7 @@ def parse_input():
     return config
 
 
-def check_python():
+def check_python() -> None:
     info = sys.version_info
     if info[0] == 3 and not info[1] >= 9:
         print('Python 3.9+ required.')
@@ -156,11 +161,11 @@ def check_python():
         sys.exit(1)
 
 
-def check_config(config):
+def check_config(config: dict[str, any]) -> None:
     pass
 
 
-def main():
+def main() -> None:
     # check python version
     check_python()
 
