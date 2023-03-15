@@ -8,6 +8,7 @@ import getopt
 import signal
 import urllib.error
 from urllib.request import Request, urlopen
+from typing import Dict, NoReturn
 
 
 def parameter_join(*parameters: str) -> str:
@@ -43,7 +44,7 @@ class CloudflareDDNS:
         return self._is_running
 
     @property
-    def _header(self) -> dict[str, str]:
+    def _header(self) -> Dict[str, str]:
         return {
             "Authorization": "Bearer " + self.token,
             "Content-Type": "application/json"
@@ -113,7 +114,7 @@ class CloudflareDDNS:
     def update_ip_record(self, new_ip: str) -> bool:
         pass
 
-    def run(self) -> None:
+    def run(self) -> NoReturn:
         self._is_running = True
         ip_record = self.get_ip_record()
         while self._is_running:
@@ -123,15 +124,15 @@ class CloudflareDDNS:
                 ip_record = public_ip
             time.sleep(self.check_period)
 
-    def stop(self) -> None:
+    def stop(self) -> NoReturn:
         self._is_running = False
 
 
-def print_help_information() -> None:
+def print_help_information() -> NoReturn:
     pass
 
 
-def parse_input() -> dict[str, any]:
+def parse_input() -> Dict[str, any]:
     shortopts = 'hp:'
     longopts = ['help', 'check-period=']
 
@@ -151,7 +152,7 @@ def parse_input() -> dict[str, any]:
     return config
 
 
-def check_python() -> None:
+def check_python() -> NoReturn:
     info = sys.version_info
     if info[0] == 3 and not info[1] >= 9:
         print('Python 3.9+ required.')
@@ -161,11 +162,11 @@ def check_python() -> None:
         sys.exit(1)
 
 
-def check_config(config: dict[str, any]) -> None:
+def check_config(config: Dict[str, any]) -> NoReturn:
     pass
 
 
-def main() -> None:
+def main() -> NoReturn:
     # check python version
     check_python()
 
