@@ -8,7 +8,7 @@ import getopt
 import signal
 import urllib.error
 from urllib.request import Request, urlopen
-from typing import Dict, NoReturn
+from typing import Dict
 
 
 def parameter_join(*parameters: str) -> str:
@@ -114,7 +114,7 @@ class CloudflareDDNS:
     def update_ip_record(self, new_ip: str) -> bool:
         pass
 
-    def run(self) -> NoReturn:
+    def run(self) -> None:
         self._is_running = True
         ip_record = self.get_ip_record()
         while self._is_running:
@@ -124,11 +124,11 @@ class CloudflareDDNS:
                 ip_record = public_ip
             time.sleep(self.check_period)
 
-    def stop(self) -> NoReturn:
+    def stop(self) -> None:
         self._is_running = False
 
 
-def print_help_information() -> NoReturn:
+def print_help_information() -> None:
     pass
 
 
@@ -152,7 +152,7 @@ def parse_input() -> Dict[str, any]:
     return config
 
 
-def check_python() -> NoReturn:
+def check_python() -> None:
     info = sys.version_info
     if info[0] == 3 and not info[1] >= 9:
         print('Python 3.9+ required.')
@@ -162,11 +162,11 @@ def check_python() -> NoReturn:
         sys.exit(1)
 
 
-def check_config(config: Dict[str, any]) -> NoReturn:
+def check_config(config: Dict[str, any]) -> None:
     pass
 
 
-def main() -> NoReturn:
+def main() -> None:
     # check python version
     check_python()
 
