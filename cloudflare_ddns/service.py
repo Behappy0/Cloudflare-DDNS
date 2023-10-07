@@ -37,11 +37,11 @@ class CloudflareDDNS:
         self.get_ip_url = get_ip_url
         self.types = types
         self._zone_identifier = self._get_zone_identifier()
-        self._is_running = False
+        self._running = False
 
     @property
     def is_running(self) -> bool:
-        return self._is_running
+        return self._running
 
     @property
     def _header(self) -> Dict[str, str]:
@@ -115,9 +115,9 @@ class CloudflareDDNS:
         pass
 
     def run(self) -> None:
-        self._is_running = True
+        self._running = True
         ip_record = self.get_ip_record()
-        while self._is_running:
+        while self._running:
             public_ip = self.get_ip_address()
             if ip_record != public_ip:
                 self.update_ip_record(public_ip)
@@ -125,7 +125,7 @@ class CloudflareDDNS:
             time.sleep(self.check_period)
 
     def stop(self) -> None:
-        self._is_running = False
+        self._running = False
 
 
 def print_help_information() -> None:
