@@ -8,7 +8,8 @@ import getopt
 import signal
 import urllib.error
 from urllib.request import Request, urlopen
-from typing import Dict
+from urllib.parse import urlencode
+from typing import Dict, Any
 
 
 def parameter_join(*parameters: str) -> str:
@@ -16,7 +17,7 @@ def parameter_join(*parameters: str) -> str:
 
 
 def url_path_join(url: str, *paths: str) -> str:
-    paths = [path.removeprefix('/').removesuffix('/') for path in paths]
+    paths = tuple(path.removeprefix('/').removesuffix('/') for path in paths)
     return '/'.join([url.removesuffix('/'), *paths])
 
 
@@ -36,7 +37,7 @@ class CloudflareDDNS:
         self.check_period = check_period
         self.get_ip_url = get_ip_url
         self.types = types
-        self._zone_identifier = self._get_zone_identifier()
+        self.zone_identifier = self.get_zone_identifier()
         self._running = False
 
     @property
@@ -75,7 +76,7 @@ class CloudflareDDNS:
         else:
             return ip[0]
 
-    def _get_zone_identifier(self) -> str:
+    def get_zone_identifier(self) -> str:
         name = "name=" + self.domain_name
         parameters = parameter_join(name)
         url = self.api + parameters
@@ -95,24 +96,51 @@ class CloudflareDDNS:
         else:
             return result[0]['id']
 
-    def get_ip_record(self) -> str:
+    def _get_dns_info(self) -> Dict[str, Any]:
         name = "name=" + record_join(self.host_name, self.domain_name)
         types = "type=" + self.types
         parameters = parameter_join(name, types)
-        url = url_path_join(self.api, self._zone_identifier,
-                            'dns_records') + parameters
+        url = url_path_join(self.api, self.zone_identifier, 'dns_records') + parameters
         request = Request(url, headers=self._header, method="GET")
         try:
             response = urlopen(request)
         except urllib.error.HTTPError as e:
-            if e.code == 403:
+            if e.code == 401:
                 print("Wrong API Token", file=sys.stderr)
                 sys.exit(2)
             else:
                 raise
+        result = json.loads(response.read())['result']
+        if not result:
+            print("Wrong Domain Name or Host Name", file=sys.stderr)
+            sys.exit(2)
+        else:
+            return result[0]
 
-    def update_ip_record(self, new_ip: str) -> bool:
-        pass
+    def get_ip_record(self) -> str:
+        return self._get_dns_info()['content']
+
+    def update_ip_record(self, new_ip: str) -> None:
+        dns_info = self._get_dns_info()
+        identifier = dns_info['id']
+        url = url_path_join(self.api, self.zone_identifier, 'dns_records', identifier)
+        data = {
+            "content": new_ip,
+            "name": record_join(self.host_name, self.domain_name),
+            "type": dns_info['type']
+        }
+        request = Request(url, data=bytes(urlencode(data), encoding="utf-8"), headers=self._header, method="PUT")
+        try:
+            response = urlopen(request)
+        except urllib.error.HTTPError as e:
+            if e.code == 401:
+                print("Wrong API Token", file=sys.stderr)
+                sys.exit(2)
+            else:
+                raise
+        if not json.loads(response.read())['success']:
+            print("Update IP Record Failed", file=sys.stderr)
+            sys.exit(2)
 
     def run(self) -> None:
         self._running = True
@@ -132,7 +160,7 @@ def print_help_information() -> None:
     pass
 
 
-def parse_input() -> Dict[str, any]:
+def parse_input() -> Dict[str, Any]:
     shortopts = 'hp:'
     longopts = ['help', 'check-period=']
 
@@ -162,7 +190,7 @@ def check_python() -> None:
         sys.exit(1)
 
 
-def check_config(config: Dict[str, any]) -> None:
+def check_config(config: Dict[str, Any]) -> None:
     pass
 
 
