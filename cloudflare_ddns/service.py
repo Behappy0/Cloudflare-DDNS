@@ -8,7 +8,6 @@ import getopt
 import signal
 import urllib.error
 from urllib.request import Request, urlopen
-from urllib.parse import urlencode
 from typing import Dict, Any
 
 
@@ -30,7 +29,7 @@ class CloudflareDDNS:
 
     api = 'https://api.cloudflare.com/client/v4/zones'
 
-    def __init__(self, host_name: str or None, domain_name: str, token: str, types: str = 'A', check_period: int = 60, get_ip_url: str = 'http://www.net.cn/static/customercare/yourip.asp'):
+    def __init__(self, host_name: str or None, domain_name: str, token: str, types: str = 'A', check_period: int = 300, get_ip_url: str = 'http://www.net.cn/static/customercare/yourip.asp'):
         self.host_name = host_name
         self.domain_name = domain_name
         self.token = token
@@ -53,11 +52,11 @@ class CloudflareDDNS:
 
     def get_ip_address(self) -> str:
         try:
-            get_ip_response = urlopen(self.get_ip_url)
+            response = urlopen(self.get_ip_url)
         except urllib.error.HTTPError as e:
             print("Get ip address failed: " + str(e.code), file=sys.stderr)
             sys.exit(2)
-        content_type = get_ip_response.headers["Content-Type"]
+        content_type = response.headers["Content-Type"]
         if content_type is None:
             encoding_charset = "utf-8"
         else:
@@ -67,9 +66,9 @@ class CloudflareDDNS:
                 encoding_charset = "utf-8"
             else:
                 encoding_charset = content_type[0].split('=')[1].lower()
-        get_ip_content = get_ip_response.read().decode(encoding=encoding_charset)
+        content = response.read().decode(encoding=encoding_charset)
         ip_pattern = re.compile(r'\d+\.\d+\.\d+\.\d+')
-        ip = ip_pattern.findall(get_ip_content)
+        ip = ip_pattern.findall(content)
         if not ip:
             print("Get ip address failed: no ip in response", file=sys.stderr)
             sys.exit(2)
@@ -129,7 +128,7 @@ class CloudflareDDNS:
             "name": record_join(self.host_name, self.domain_name),
             "type": dns_info['type']
         }
-        request = Request(url, data=bytes(urlencode(data), encoding="utf-8"), headers=self._header, method="PUT")
+        request = Request(url, data=bytes(json.dumps(data), encoding="utf-8"), headers=self._header, method="PUT")
         try:
             response = urlopen(request)
         except urllib.error.HTTPError as e:
@@ -160,9 +159,26 @@ def print_help_information() -> None:
     pass
 
 
+def print_version() -> None:
+    version = ''
+    try:
+        import pkg_resources
+        version = pkg_resources.get_distribution('cloudflare-ddns').version
+    except Exception:
+        pass
+    print('cloudflare-ddns {}'.format(version))
+
+
+def to_str(s):
+    if bytes != str:
+        if type(s) == bytes:
+            return s.decode('utf-8')
+    return str(s)
+
+
 def parse_input() -> Dict[str, Any]:
-    shortopts = 'hp:'
-    longopts = ['help', 'check-period=']
+    shortopts = 'ht:n:d:t:p:'
+    longopts = ['help', 'version', 'token=', 'name=', 'domain=', 'type=', 'check-period=', 'ip-url=']
 
     try:
         optdict, _ = getopt.getopt(sys.argv[1:], shortopts, longopts)
@@ -176,6 +192,28 @@ def parse_input() -> Dict[str, Any]:
         if key in ('-h', '--help'):
             print_help_information()
             sys.exit(0)
+        elif key == '--version':
+            print_version()
+            sys.exit(0)
+        elif key in ('-t', '--token'):
+            config['token'] = to_str(value)
+        elif key in ('-n', '--name'):
+            config['host_name'] = to_str(value) if value else None
+        elif key in ('-d', '--domain'):
+            config['domain_name'] = to_str(value)
+        elif key in ('-t', '--type'):
+            config['types'] = to_str(value)
+        elif key in ('-p', '--check-period'):
+            config['check_period'] = int(value)
+        elif key == '--ip-url':
+            config['get_ip_url'] = to_str(value)
+        else:
+            print("Unknown argument: {}".format(key), file=sys.stderr)
+            sys.exit(2)
+
+    config['host_name'] = config.get('host_name', None)
+    config['check_period'] = config.get('check_period', 300)
+    config['get_ip_url'] = config.get('get_ip_url', 'http://www.net.cn/static/customercare/yourip.asp')
 
     return config
 
@@ -199,7 +237,7 @@ def main() -> None:
     check_python()
 
     # Set stop signal
-    signal.signal(signal.SIGINT, lambda: sys.exit(1))
+    signal.signal(signal.SIGINT, lambda sig, frame: sys.exit(1))
 
     # Parse command line inputs
     config = parse_input()
@@ -208,7 +246,7 @@ def main() -> None:
     check_config(config)
 
     # Instanlise the DDNS service
-    service = CloudflareDDNS()
+    service = CloudflareDDNS(**config)
 
     # Run the DDNS service
     service.run()
