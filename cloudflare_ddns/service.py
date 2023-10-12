@@ -6,6 +6,7 @@ import time
 import json
 import getopt
 import signal
+import inspect
 import urllib.error
 from urllib.request import Request, urlopen
 from typing import Dict, Any
@@ -177,7 +178,7 @@ def to_str(s):
 
 
 def parse_input() -> Dict[str, Any]:
-    shortopts = 'ht:n:d:t:p:'
+    shortopts = 'ht:n:d:k:p:'
     longopts = ['help', 'version', 'token=', 'name=', 'domain=', 'type=', 'check-period=', 'ip-url=']
 
     try:
@@ -195,7 +196,7 @@ def parse_input() -> Dict[str, Any]:
         elif key == '--version':
             print_version()
             sys.exit(0)
-        elif key in ('-t', '--token'):
+        elif key in ('-k', '--token'):
             config['token'] = to_str(value)
         elif key in ('-n', '--name'):
             config['host_name'] = to_str(value) if value else None
@@ -211,9 +212,13 @@ def parse_input() -> Dict[str, Any]:
             print("Unknown argument: {}".format(key), file=sys.stderr)
             sys.exit(2)
 
-    config['host_name'] = config.get('host_name', None)
-    config['check_period'] = config.get('check_period', 300)
-    config['get_ip_url'] = config.get('get_ip_url', 'http://www.net.cn/static/customercare/yourip.asp')
+    sig = inspect.signature(CloudflareDDNS)
+
+    config['host_name'] = config.get('host_name', sig.parameters['host_name'].default)
+    config['check_period'] = config.get('check_period', sig.parameters['check_period'].default)
+    config['get_ip_url'] = config.get('get_ip_url', sig.parameters['get_ip_url'].default)
+
+    check_config(config)
 
     return config
 
@@ -241,9 +246,6 @@ def main() -> None:
 
     # Parse command line inputs
     config = parse_input()
-
-    # check config
-    check_config(config)
 
     # Instanlise the DDNS service
     service = CloudflareDDNS(**config)

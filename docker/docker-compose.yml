@@ -6,6 +6,8 @@ services:
       - HOST_NAME=
       - DOMAIN_NAME=
       - TOKEN=
+      - TYPE=
+      - ARGS=
     network_mode: bridge
     container_name: Cloudflare-DDNS
     restart: unless-stopped
