@@ -30,13 +30,14 @@ class CloudflareDDNS:
 
     api = 'https://api.cloudflare.com/client/v4/zones'
 
-    def __init__(self, host_name: str or None, domain_name: str, token: str, types: str = 'A', check_period: int = 300, get_ip_url: str = 'http://www.net.cn/static/customercare/yourip.asp'):
+    def __init__(self, host_name: str or None, domain_name: str, token: str, type_: str = 'A', check_period: int = 300, get_ip_url: str = 'http://www.net.cn/static/customercare/yourip.asp'):
+        assert type_ in ('A', 'AAAA')
         self.host_name = host_name
         self.domain_name = domain_name
         self.token = token
         self.check_period = check_period
         self.get_ip_url = get_ip_url
-        self.types = types
+        self.type_ = type_
         self.zone_identifier = self.get_zone_identifier()
         self._running = False
 
@@ -98,7 +99,7 @@ class CloudflareDDNS:
 
     def _get_dns_info(self) -> Dict[str, Any]:
         name = "name=" + record_join(self.host_name, self.domain_name)
-        types = "type=" + self.types
+        types = "type=" + self.type_
         parameters = parameter_join(name, types)
         url = url_path_join(self.api, self.zone_identifier, 'dns_records') + parameters
         request = Request(url, headers=self._header, method="GET")
