@@ -82,3 +82,11 @@ docker rmi cloudflare-ddns
 ## Command Line Arguments
 
 ## Docker Envirnoment Variables
+
+| Parameter | Function |
+| --------- | -------- |
+| -e HOST_NAME= | Your host name, "" for no host name. e.g. "www" |
+| -e DOMAIN_NAME= | Your domain name. e.g. "example.com" |
+| -e TOKEN= | Your cloudflare api token. |
+| -e TYPE= | The record type, support "A" and "AAAA". |
+| -e ARGS= | Pass other command line arguments to cloudflare-ddns, supported arguments can be seen [Command Line Arguments](#docker-envirnoment-variables). e.g. "--check-period 360" |
