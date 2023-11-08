@@ -128,7 +128,7 @@ class CloudflareDDNS:
         data = {
             "content": new_ip,
             "name": record_join(self.host_name, self.domain_name),
-            "type": dns_info['type']
+            "type": self.type_
         }
         request = Request(url, data=bytes(json.dumps(data), encoding="utf-8"), headers=self._header, method="PUT")
         try:

@@ -1,10 +1,10 @@
 # Cloudflare-DDNS
 
-A DDNS service using cloudflare api
+A DDNS service using cloudflare api.
 
 ## Install
 
-> **Prerequests:** cloudflare api token with zone dns read/write permit
+> **Prerequests:** cloudflare api token with zone dns read/write permit.
 
 ### with pip
 
@@ -34,7 +34,7 @@ Build docker image:
 
 ```shell
 git clone https://github.com/Behappy0/Cloudflare-DDNS.git
-cd Cloudflare-DDNS
+cd ./Cloudflare-DDNS/docker
 docker build -t cloudflare-ddns .
 ```
 
@@ -54,8 +54,6 @@ docker run -d \
 Run container by docker-compose:
 
 ```shell
-cd ./docker
-
 # edit compose file
 vim docker-compose.yaml
 
@@ -76,7 +74,9 @@ pip uninstall cloudflare-ddns
 ### with docker
 
 ```shell
+docker stop Cloudflare-DDNS
 docker rm Cloudflare-DDNS
+docker rmi cloudflare-ddns
 ```
 
 ## Command Line Arguments
