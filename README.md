@@ -83,12 +83,13 @@ docker rmi cloudflare-ddns
 
 | Parameter | Function |
 | --------- | -------- |
-| '-n', '--name' | Your host name, "" for no host name. e.g. "www" |
-| '-d', '--domain' | Your domain name. e.g. "example.com" |
-| '-k', '--token' | Your cloudflare api token. |
-| '-t', '--type' | The record type, support "A" and "AAAA". |
-| '-p', '--check-period' | The period that cloudflare-ddns check the change of your ip address. Unit: seconds Default: 360 |
-| '-h', '--help' | Print the help information. |
+| -n, --name | Your host name, "" for no host name. e.g. "www" |
+| -d, --domain | Your domain name. e.g. "example.com" |
+| -k, --token | Your cloudflare api token. |
+| -t, --type | The record type, support "A" and "AAAA". |
+| -p, --check-period | The period for checking ip address change. Default: 300s |
+| --ip-url | The url to get your ip address. Note: the cloudflare-ddns will open this url and find ip address in response using regular expression. |
+| -h, --help | Print the help information. |
 | --version | Print the version of cloudflare-ddns. |
 
 ## Docker Envirnoment Variables
