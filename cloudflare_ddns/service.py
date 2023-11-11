@@ -30,6 +30,7 @@ def record_join(host_name: Optional[str], domain_name: str) -> str:
 class CloudflareDDNS:
 
     api = 'https://api.cloudflare.com/client/v4/zones'
+    user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36'
 
     def __init__(self, host_name: Optional[str], domain_name: str, token: str, type_: str = 'A', check_period: int = 300, get_ip_url: Optional[str] = None):
         assert type_ in ('A', 'AAAA')
@@ -39,9 +40,9 @@ class CloudflareDDNS:
         self.check_period = check_period
         if get_ip_url is None:
             if type_ == 'A':
-                self.get_ip_url = 'http://www.net.cn/static/customercare/yourip.asp'
+                self.get_ip_url = 'https://whatismyipaddress.com/'
             else:
-                self.get_ip_url = ''
+                self.get_ip_url = 'https://whatismyipaddress.com/'
         else:
             self.get_ip_url = get_ip_url
         self.type_ = type_
@@ -60,8 +61,9 @@ class CloudflareDDNS:
         }
 
     def get_ip_address(self) -> str:
+        request = Request(self.get_ip_url, headers={'User-Agent': self.user_agent}, method="GET")
         try:
-            response = urlopen(self.get_ip_url)
+            response = urlopen(request)
         except urllib.error.HTTPError as e:
             print("Get ip address failed: " + str(e.code), file=sys.stderr)
             sys.exit(2)
@@ -69,20 +71,22 @@ class CloudflareDDNS:
         if content_type is None:
             encoding_charset = "utf-8"
         else:
-            content_type = list(filter(lambda item: item.startswith("charset="),
-                                       content_type.split(';')))
+            content_type = list(filter(lambda item: item.startswith("charset="), content_type.split(';')))
             if not content_type:
                 encoding_charset = "utf-8"
             else:
                 encoding_charset = content_type[0].split('=')[1].lower()
         content = response.read().decode(encoding=encoding_charset)
-        ip_pattern = re.compile(r'\d+\.\d+\.\d+\.\d+')
-        ip = ip_pattern.findall(content)
+        if self.type_ == 'A':
+            ip_pattern = re.compile(r'((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})(\.((2(5[0-5]|[0-4]\d))|[0-1]?\d{1,2})){3}')
+        else:
+            ip_pattern = re.compile(r'(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4})|(([0-9a-fA-F]{1,4}:){6}:[0-9a-fA-F]{1,4})|(([0-9a-fA-F]{1,4}:){5}(:[0-9a-fA-F]{1,4}){1,2})|(([0-9a-fA-F]{1,4}:){4}(:[0-9a-fA-F]{1,4}){1,3})|(([0-9a-fA-F]{1,4}:){3}(:[0-9a-fA-F]{1,4}){1,4})|(([0-9a-fA-F]{1,4}:){2}(:[0-9a-fA-F]{1,4}){1,5})|([0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6}))|(:((:[0-9a-fA-F]{1,4}){1,7}))')
+        ip = ip_pattern.search(content)
         if not ip:
             print("Get ip address failed: no ip in response", file=sys.stderr)
             sys.exit(2)
         else:
-            return ip[0]
+            return ip.group(0)
 
     def get_zone_identifier(self) -> str:
         name = "name=" + self.domain_name
