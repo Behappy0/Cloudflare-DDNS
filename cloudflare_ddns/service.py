@@ -13,6 +13,9 @@ from urllib.request import Request, urlopen
 from typing import Dict, Any, Optional
 
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+
+
 def parameter_join(*parameters: str) -> str:
     return '?' + '&'.join(parameters)
 
@@ -50,6 +53,12 @@ class CloudflareDDNS:
             self.get_ip_url = get_ip_url
         self.zone_identifier = self.get_zone_identifier()
         self._running = False
+        logging.info('ddns service has initialized, configuration: {}'.format({
+            'name': record_join(self.host_name, self.domain_name),
+            'type': self.type_,
+            'check_period': self.check_period,
+            'get_ip_url': self.get_ip_url
+        }))
 
     @property
     def is_running(self) -> bool:
@@ -157,16 +166,23 @@ class CloudflareDDNS:
             sys.exit(2)
 
     def run(self) -> None:
+        logging.info('ddns service has started')
         self._running = True
         ip_record = self.get_ip_record()
         while self._running:
+            logging.info('checking ip change ...')
             public_ip = self.get_ip_address()
+            logging.info('current ip record: {}'.format(ip_record))
+            logging.info('current ip address: {}'.format(public_ip))
             if ip_record != public_ip:
+                logging.info('updating ip record {} -> {}'.format(ip_record, public_ip))
                 self.update_ip_record(public_ip)
+                logging.info('update ip record success')
                 ip_record = public_ip
             time.sleep(self.check_period)
 
     def stop(self) -> None:
+        logging.info('ddns service has stopped')
         self._running = False
 
 
