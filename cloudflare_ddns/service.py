@@ -5,11 +5,12 @@ import sys
 import time
 import json
 import getopt
+import logging
 import signal
 import inspect
 import urllib.error
 from urllib.request import Request, urlopen
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 def parameter_join(*parameters: str) -> str:
@@ -21,7 +22,7 @@ def url_path_join(url: str, *paths: str) -> str:
     return '/'.join([url.removesuffix('/'), *paths])
 
 
-def record_join(host_name: str, domain_name: str) -> str:
+def record_join(host_name: Optional[str], domain_name: str) -> str:
     return domain_name if host_name is None or host_name.isspace() \
         else host_name + '.' + domain_name
 
@@ -30,13 +31,19 @@ class CloudflareDDNS:
 
     api = 'https://api.cloudflare.com/client/v4/zones'
 
-    def __init__(self, host_name: str or None, domain_name: str, token: str, type_: str = 'A', check_period: int = 300, get_ip_url: str = 'http://www.net.cn/static/customercare/yourip.asp'):
+    def __init__(self, host_name: Optional[str], domain_name: str, token: str, type_: str = 'A', check_period: int = 300, get_ip_url: Optional[str] = None):
         assert type_ in ('A', 'AAAA')
         self.host_name = host_name
         self.domain_name = domain_name
         self.token = token
         self.check_period = check_period
-        self.get_ip_url = get_ip_url
+        if get_ip_url is None:
+            if type_ == 'A':
+                self.get_ip_url = 'http://www.net.cn/static/customercare/yourip.asp'
+            else:
+                self.get_ip_url = ''
+        else:
+            self.get_ip_url = get_ip_url
         self.type_ = type_
         self.zone_identifier = self.get_zone_identifier()
         self._running = False
@@ -158,7 +165,23 @@ class CloudflareDDNS:
 
 
 def print_help_information() -> None:
-    pass
+    print('''A DDNS service using cloudflare api.
+
+Usage: cloudflare-ddns [options...]
+
+Options:
+    -n, --name <host_name>              Your host name, "" for no host name. e.g. "www"
+    -d, --domain <domain_name>          Your domain name. e.g. "example.com"
+    -k, --token <token>                 Your cloudflare api token.
+    -t, --type <record_type>            The record type, support "A" and "AAAA".
+    -p, --check-period  <check_period>  The period for checking ip address change. Default: 300s
+    --ip-url <get_ip_url>               The url to get your ip address. Note: the cloudflare-ddns will open this url and find ip address in response using regular expression.
+
+Gereral options:
+    -h, --help                          Print the help information.
+    --version                           Print the version of cloudflare-ddns.
+
+Online page: <https://github.com/Behappy0/Cloudflare-DDNS>''')
 
 
 def print_version() -> None:
@@ -179,7 +202,7 @@ def to_str(s):
 
 
 def parse_input() -> Dict[str, Any]:
-    shortopts = 'ht:n:d:k:p:'
+    shortopts = 'hk:n:d:t:p:'
     longopts = ['help', 'version', 'token=', 'name=', 'domain=', 'type=', 'check-period=', 'ip-url=']
 
     try:
@@ -204,7 +227,7 @@ def parse_input() -> Dict[str, Any]:
         elif key in ('-d', '--domain'):
             config['domain_name'] = to_str(value)
         elif key in ('-t', '--type'):
-            config['types'] = to_str(value)
+            config['type_'] = to_str(value)
         elif key in ('-p', '--check-period'):
             config['check_period'] = int(value)
         elif key == '--ip-url':
@@ -215,7 +238,7 @@ def parse_input() -> Dict[str, Any]:
 
     sig = inspect.signature(CloudflareDDNS)
 
-    config['host_name'] = config.get('host_name', sig.parameters['host_name'].default)
+    config['host_name'] = config.get('host_name', None)
     config['check_period'] = config.get('check_period', sig.parameters['check_period'].default)
     config['get_ip_url'] = config.get('get_ip_url', sig.parameters['get_ip_url'].default)
 
