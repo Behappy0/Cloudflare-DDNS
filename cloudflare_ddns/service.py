@@ -23,8 +23,10 @@ def url_path_join(url: str, *paths: str) -> str:
 
 
 def record_join(host_name: Optional[str], domain_name: str) -> str:
-    return domain_name if host_name is None or host_name.isspace() \
-        else host_name + '.' + domain_name
+    if host_name is None or host_name.isspace():
+        return domain_name
+    else:
+        return host_name + '.' + domain_name
 
 
 class CloudflareDDNS:
@@ -32,20 +34,20 @@ class CloudflareDDNS:
     api = 'https://api.cloudflare.com/client/v4/zones'
     user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36'
 
-    def __init__(self, host_name: Optional[str], domain_name: str, token: str, type_: str = 'A', check_period: int = 300, get_ip_url: Optional[str] = None):
+    def __init__(self, host_name: Optional[str], domain_name: str, token: str, type_: str, check_period: int = 300, get_ip_url: Optional[str] = None):
         assert type_ in ('A', 'AAAA')
         self.host_name = host_name
         self.domain_name = domain_name
         self.token = token
+        self.type_ = type_
         self.check_period = check_period
         if get_ip_url is None:
             if type_ == 'A':
-                self.get_ip_url = 'https://whatismyipaddress.com/'
+                self.get_ip_url = 'https://myip4.ipip.net'
             else:
-                self.get_ip_url = 'https://whatismyipaddress.com/'
+                self.get_ip_url = 'https://myip6.ipip.net'
         else:
             self.get_ip_url = get_ip_url
-        self.type_ = type_
         self.zone_identifier = self.get_zone_identifier()
         self._running = False
 
@@ -65,7 +67,7 @@ class CloudflareDDNS:
         try:
             response = urlopen(request)
         except urllib.error.HTTPError as e:
-            print("Get ip address failed: " + str(e.code), file=sys.stderr)
+            logging.error("Get ip address failed: " + str(e.code))
             sys.exit(2)
         content_type = response.headers["Content-Type"]
         if content_type is None:
@@ -83,7 +85,7 @@ class CloudflareDDNS:
             ip_pattern = re.compile(r'(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4})|(([0-9a-fA-F]{1,4}:){6}:[0-9a-fA-F]{1,4})|(([0-9a-fA-F]{1,4}:){5}(:[0-9a-fA-F]{1,4}){1,2})|(([0-9a-fA-F]{1,4}:){4}(:[0-9a-fA-F]{1,4}){1,3})|(([0-9a-fA-F]{1,4}:){3}(:[0-9a-fA-F]{1,4}){1,4})|(([0-9a-fA-F]{1,4}:){2}(:[0-9a-fA-F]{1,4}){1,5})|([0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6}))|(:((:[0-9a-fA-F]{1,4}){1,7}))')
         ip = ip_pattern.search(content)
         if not ip:
-            print("Get ip address failed: no ip in response", file=sys.stderr)
+            logging.error("Get ip address failed: no ip in response")
             sys.exit(2)
         else:
             return ip.group(0)
@@ -97,34 +99,34 @@ class CloudflareDDNS:
             response = urlopen(request)
         except urllib.error.HTTPError as e:
             if e.code == 403:
-                print("Wrong API Token", file=sys.stderr)
+                logging.error("Wrong API Token")
                 sys.exit(2)
             else:
                 raise
         result = json.loads(response.read())['result']
         if not result:
-            print("Wrong Domain Name", file=sys.stderr)
+            logging.error("Wrong Domain Name")
             sys.exit(2)
         else:
             return result[0]['id']
 
     def _get_dns_info(self) -> Dict[str, Any]:
         name = "name=" + record_join(self.host_name, self.domain_name)
-        types = "type=" + self.type_
-        parameters = parameter_join(name, types)
+        type_ = "type=" + self.type_
+        parameters = parameter_join(name, type_)
         url = url_path_join(self.api, self.zone_identifier, 'dns_records') + parameters
         request = Request(url, headers=self._header, method="GET")
         try:
             response = urlopen(request)
         except urllib.error.HTTPError as e:
             if e.code == 401:
-                print("Wrong API Token", file=sys.stderr)
+                logging.error("Wrong API Token")
                 sys.exit(2)
             else:
                 raise
         result = json.loads(response.read())['result']
         if not result:
-            print("Wrong Domain Name or Host Name", file=sys.stderr)
+            logging.error("Wrong Host Name or Record Type")
             sys.exit(2)
         else:
             return result[0]
@@ -138,20 +140,20 @@ class CloudflareDDNS:
         url = url_path_join(self.api, self.zone_identifier, 'dns_records', identifier)
         data = {
             "content": new_ip,
-            "name": record_join(self.host_name, self.domain_name),
-            "type": self.type_
+            "name": dns_info['name'],
+            "type": dns_info['type']
         }
         request = Request(url, data=bytes(json.dumps(data), encoding="utf-8"), headers=self._header, method="PUT")
         try:
             response = urlopen(request)
         except urllib.error.HTTPError as e:
             if e.code == 401:
-                print("Wrong API Token", file=sys.stderr)
+                logging.error("Wrong API Token")
                 sys.exit(2)
             else:
                 raise
         if not json.loads(response.read())['success']:
-            print("Update IP Record Failed", file=sys.stderr)
+            logging.error("Update IP Record Failed")
             sys.exit(2)
 
     def run(self) -> None:
@@ -177,7 +179,7 @@ Options:
     -n, --name <host_name>              Your host name, "" for no host name. e.g. "www"
     -d, --domain <domain_name>          Your domain name. e.g. "example.com"
     -k, --token <token>                 Your cloudflare api token.
-    -t, --type <record_type>            The record type, support "A" and "AAAA".
+    -t, --type <record_type>            The record type, supports "A" and "AAAA".
     -p, --check-period  <check_period>  The period for checking ip address change. Default: 300s
     --ip-url <get_ip_url>               The url to get your ip address. Note: the cloudflare-ddns will open this url and find ip address in response using regular expression.
 
@@ -198,13 +200,6 @@ def print_version() -> None:
     print('cloudflare-ddns {}'.format(version))
 
 
-def to_str(s):
-    if bytes != str:
-        if type(s) == bytes:
-            return s.decode('utf-8')
-    return str(s)
-
-
 def parse_input() -> Dict[str, Any]:
     shortopts = 'hk:n:d:t:p:'
     longopts = ['help', 'version', 'token=', 'name=', 'domain=', 'type=', 'check-period=', 'ip-url=']
@@ -212,7 +207,7 @@ def parse_input() -> Dict[str, Any]:
     try:
         optdict, _ = getopt.getopt(sys.argv[1:], shortopts, longopts)
     except getopt.GetoptError as e:
-        print(e, file=sys.stderr)
+        logging.error(e)
         print_help_information()
         sys.exit(2)
 
@@ -225,19 +220,19 @@ def parse_input() -> Dict[str, Any]:
             print_version()
             sys.exit(0)
         elif key in ('-k', '--token'):
-            config['token'] = to_str(value)
+            config['token'] = str(value)
         elif key in ('-n', '--name'):
-            config['host_name'] = to_str(value) if value else None
+            config['host_name'] = str(value) if value else None
         elif key in ('-d', '--domain'):
-            config['domain_name'] = to_str(value)
+            config['domain_name'] = str(value)
         elif key in ('-t', '--type'):
-            config['type_'] = to_str(value)
+            config['type_'] = str(value)
         elif key in ('-p', '--check-period'):
             config['check_period'] = int(value)
         elif key == '--ip-url':
-            config['get_ip_url'] = to_str(value)
+            config['get_ip_url'] = str(value)
         else:
-            print("Unknown argument: {}".format(key), file=sys.stderr)
+            logging.error("Unknown argument: {}".format(key))
             sys.exit(2)
 
     sig = inspect.signature(CloudflareDDNS)
@@ -254,15 +249,32 @@ def parse_input() -> Dict[str, Any]:
 def check_python() -> None:
     info = sys.version_info
     if info[0] == 3 and not info[1] >= 9:
-        print('Python 3.9+ required.')
+        logging.error('Python 3.9+ required.')
         sys.exit(1)
     elif info[0] != 3:
-        print('Python version not supported.')
+        logging.error('Python version not supported.')
         sys.exit(1)
 
 
 def check_config(config: Dict[str, Any]) -> None:
-    pass
+    if 'domain_name' not in config:
+        logging.error('Domain name not specified.')
+        print_help_information()
+        sys.exit(2)
+
+    if 'type_' not in config:
+        logging.error('Record type not specified.')
+        print_help_information()
+        sys.exit(2)
+
+    if 'token' not in config:
+        logging.error('Token not specified.')
+        print_help_information()
+        sys.exit(2)
+
+    if config['type_'] not in ('A', 'AAAA'):
+        logging.error('The record type only supports "A" and "AAAA".')
+        sys.exit(2)
 
 
 def main() -> None:

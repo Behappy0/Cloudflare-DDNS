@@ -86,7 +86,7 @@ docker rmi cloudflare-ddns
 | -n, --name | Your host name, "" for no host name. e.g. "www" |
 | -d, --domain | Your domain name. e.g. "example.com" |
 | -k, --token | Your cloudflare api token. |
-| -t, --type | The record type, support "A" and "AAAA". |
+| -t, --type | The record type, supports "A" and "AAAA". |
 | -p, --check-period | The period for checking ip address change. Default: 300s |
 | --ip-url | The url to get your ip address. Note: the cloudflare-ddns will open this url and find ip address in response using regular expression. |
 | -h, --help | Print the help information. |
@@ -99,5 +99,5 @@ docker rmi cloudflare-ddns
 | -e HOST_NAME= | Your host name, "" for no host name. e.g. "www" |
 | -e DOMAIN_NAME= | Your domain name. e.g. "example.com" |
 | -e TOKEN= | Your cloudflare api token. |
-| -e TYPE= | The record type, support "A" and "AAAA". |
+| -e TYPE= | The record type, supports "A" and "AAAA". |
 | -e ARGS= | Pass other command line arguments to cloudflare-ddns, supported arguments can be seen in [Command Line Arguments](#docker-envirnoment-variables). e.g. "--check-period 360" |
