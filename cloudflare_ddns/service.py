@@ -13,7 +13,7 @@ from urllib.request import Request, urlopen
 from typing import Dict, Any, Optional
 
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+logging.basicConfig(level=logging.INFO, format='[%(asctime)s] [%(levelname)s] [%(filename)s: %(lineno)d] - %(message)s')
 
 
 def parameter_join(*parameters: str) -> str:
@@ -53,12 +53,12 @@ class CloudflareDDNS:
             self.get_ip_url = get_ip_url
         self.zone_identifier = self.get_zone_identifier()
         self._running = False
-        logging.info('ddns service has initialized, configuration: {}'.format({
+        logging.info('The DDNS service has initialized, configuration:\n{}'.format(json.dumps({
             'name': record_join(self.host_name, self.domain_name),
             'type': self.type_,
             'check_period': self.check_period,
             'get_ip_url': self.get_ip_url
-        }))
+        }, sort_keys=False, indent=4)))
 
     @property
     def is_running(self) -> bool:
@@ -94,7 +94,7 @@ class CloudflareDDNS:
             ip_pattern = re.compile(r'(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4})|(([0-9a-fA-F]{1,4}:){6}:[0-9a-fA-F]{1,4})|(([0-9a-fA-F]{1,4}:){5}(:[0-9a-fA-F]{1,4}){1,2})|(([0-9a-fA-F]{1,4}:){4}(:[0-9a-fA-F]{1,4}){1,3})|(([0-9a-fA-F]{1,4}:){3}(:[0-9a-fA-F]{1,4}){1,4})|(([0-9a-fA-F]{1,4}:){2}(:[0-9a-fA-F]{1,4}){1,5})|([0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6}))|(:((:[0-9a-fA-F]{1,4}){1,7}))')
         ip = ip_pattern.search(content)
         if not ip:
-            logging.error("Get ip address failed: no ip in response")
+            logging.error("Get ip address failed: no IP in response.")
             sys.exit(2)
         else:
             return ip.group(0)
@@ -108,13 +108,13 @@ class CloudflareDDNS:
             response = urlopen(request)
         except urllib.error.HTTPError as e:
             if e.code == 403:
-                logging.error("Wrong API Token")
+                logging.error("Wrong API token.")
                 sys.exit(2)
             else:
                 raise
         result = json.loads(response.read())['result']
         if not result:
-            logging.error("Wrong Domain Name")
+            logging.error("Wrong domain name.")
             sys.exit(2)
         else:
             return result[0]['id']
@@ -129,13 +129,13 @@ class CloudflareDDNS:
             response = urlopen(request)
         except urllib.error.HTTPError as e:
             if e.code == 401:
-                logging.error("Wrong API Token")
+                logging.error("Wrong API token.")
                 sys.exit(2)
             else:
                 raise
         result = json.loads(response.read())['result']
         if not result:
-            logging.error("Wrong Host Name or Record Type")
+            logging.error("Wrong host name or record type.")
             sys.exit(2)
         else:
             return result[0]
@@ -157,32 +157,32 @@ class CloudflareDDNS:
             response = urlopen(request)
         except urllib.error.HTTPError as e:
             if e.code == 401:
-                logging.error("Wrong API Token")
+                logging.error("Wrong API token.")
                 sys.exit(2)
             else:
                 raise
         if not json.loads(response.read())['success']:
-            logging.error("Update IP Record Failed")
+            logging.error("Update IP record failed.")
             sys.exit(2)
 
     def run(self) -> None:
-        logging.info('ddns service has started')
+        logging.info('The DDNS service has started.')
         self._running = True
         ip_record = self.get_ip_record()
         while self._running:
-            logging.info('checking ip change ...')
+            logging.info('Checking ip change ...')
             public_ip = self.get_ip_address()
-            logging.info('current ip record: {}'.format(ip_record))
-            logging.info('current ip address: {}'.format(public_ip))
+            logging.info('Current ip record: {}'.format(ip_record))
+            logging.info('Current ip address: {}'.format(public_ip))
             if ip_record != public_ip:
-                logging.info('updating ip record {} -> {}'.format(ip_record, public_ip))
+                logging.info('Updating ip record {} -> {}'.format(ip_record, public_ip))
                 self.update_ip_record(public_ip)
-                logging.info('update ip record success')
+                logging.info('Update ip record success.')
                 ip_record = public_ip
             time.sleep(self.check_period)
 
     def stop(self) -> None:
-        logging.info('ddns service has stopped')
+        logging.info('The DDNS service has stopped.')
         self._running = False
 
 
@@ -289,7 +289,7 @@ def check_config(config: Dict[str, Any]) -> None:
         sys.exit(2)
 
     if config['type_'] not in ('A', 'AAAA'):
-        logging.error('The record type only supports "A" and "AAAA".')
+        logging.error('The record type must be "A" or "AAAA".')
         sys.exit(2)
 
 
