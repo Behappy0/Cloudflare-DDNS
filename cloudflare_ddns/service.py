@@ -7,7 +7,6 @@ import json
 import getopt
 import logging
 import signal
-import inspect
 import urllib.error
 from urllib.request import Request, urlopen
 from typing import Dict, Any, Optional
@@ -196,7 +195,7 @@ Options:
     -d, --domain <domain_name>          Your domain name. e.g. "example.com"
     -k, --token <token>                 Your cloudflare api token.
     -t, --type <record_type>            The record type, supports "A" and "AAAA".
-    -p, --check-period  <check_period>  The period for checking ip address change. Default: 300s
+    -p, --check-period <check_period>   The period for checking ip address change. Default: 300s
     --ip-url <get_ip_url>               The url to get your ip address. Note: the cloudflare-ddns will open this url and find ip address in response using regular expression.
 
 Gereral options:
@@ -221,7 +220,11 @@ def parse_input() -> Dict[str, Any]:
     longopts = ['help', 'version', 'token=', 'name=', 'domain=', 'type=', 'check-period=', 'ip-url=']
 
     try:
-        optdict, _ = getopt.getopt(sys.argv[1:], shortopts, longopts)
+        if sys.argv[0] in ("python", "python3"):
+            argv = sys.argv[2:]
+        else:
+            argv = sys.argv[1:]
+        optdict, _ = getopt.getopt(argv, shortopts, longopts)
     except getopt.GetoptError as e:
         logging.error(e)
         print_help_information()
@@ -251,11 +254,7 @@ def parse_input() -> Dict[str, Any]:
             logging.error("Unknown argument: {}".format(key))
             sys.exit(2)
 
-    sig = inspect.signature(CloudflareDDNS)
-
     config['host_name'] = config.get('host_name', None)
-    config['check_period'] = config.get('check_period', sig.parameters['check_period'].default)
-    config['get_ip_url'] = config.get('get_ip_url', sig.parameters['get_ip_url'].default)
 
     check_config(config)
 
@@ -274,17 +273,17 @@ def check_python() -> None:
 
 def check_config(config: Dict[str, Any]) -> None:
     if 'domain_name' not in config:
-        logging.error('Domain name not specified.')
+        logging.error('Domain name is not specified.')
         print_help_information()
         sys.exit(2)
 
     if 'type_' not in config:
-        logging.error('Record type not specified.')
+        logging.error('Record type is not specified.')
         print_help_information()
         sys.exit(2)
 
     if 'token' not in config:
-        logging.error('Token not specified.')
+        logging.error('Token is not specified.')
         print_help_information()
         sys.exit(2)
 
