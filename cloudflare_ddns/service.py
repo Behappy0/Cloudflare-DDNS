@@ -152,8 +152,7 @@ class CloudflareDDNS:
             "type": dns_info["type"],
             "proxied": dns_info["proxied"],
             "ttl": dns_info["ttl"],
-            "comment": dns_info["comment"],
-            "tags": dns_info["tags"]
+            "comment": dns_info["comment"]
         }
         request = Request(url, data=bytes(json.dumps(data), encoding="utf-8"), headers=self._header, method="PUT")
         try:
